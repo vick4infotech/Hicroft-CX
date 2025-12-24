@@ -16,8 +16,15 @@ async function bootstrap() {
   const config = app.get(ConfigService);
 
   const frontendUrl = config.get<string>("FRONTEND_URL") ?? "http://localhost:3000";
+
+  // Dev ergonomics: if the frontend starts on a different port (3001, 3002) or
+  // you open via 127.0.0.1 instead of localhost, strict single-origin CORS
+  // will break login with a generic "Failed to fetch".
+  const nodeEnv = (config.get<string>("NODE_ENV") ?? "development").toLowerCase();
+  const isProd = nodeEnv === "production";
+
   app.enableCors({
-    origin: frontendUrl,
+    origin: isProd ? frontendUrl : true, // reflect request origin in dev
     credentials: true,
   });
 

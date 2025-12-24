@@ -7,7 +7,12 @@ export async function apiFetch<T>(
   path: string,
   init?: RequestInit & { retry?: boolean },
 ): Promise<T> {
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+  // IMPORTANT:
+  // Use a same-origin proxy route to avoid CORS and "Failed to fetch" issues
+  // when frontend/back end ports differ or Windows resolves localhost
+  // differently (127.0.0.1 vs localhost).
+  const base = "/api/proxy";
+
   const res = await fetch(`${base}${path}`, {
     ...init,
     credentials: "include",

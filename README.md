@@ -67,7 +67,7 @@ npm run prisma:seed
 npm run dev
 ```
 
-- Frontend: http://localhost:3000
+- Frontend: http://locanlhost:3000
 - Backend: http://localhost:4000/api
 
 The app loads at: http://localhost:3000/login
