@@ -1,0 +1,25 @@
+{
+  "name": "hicroft-cx",
+  "private": true,
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend"
+  ],
+  "scripts": {
+    "dev": "dotenv -e .env -- concurrently -n FRONTEND,BACKEND -c auto \"npm run dev -w @hicroft/frontend\" \"npm run start:dev -w @hicroft/backend\"",
+    "build": "npm run build -w @hicroft/backend && npm run build -w @hicroft/frontend",
+    "lint": "npm run lint -w @hicroft/backend && npm run lint -w @hicroft/frontend",
+    "format": "prettier -w .",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "ts-node prisma/seed.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1",
+    "dotenv-cli": "^7.4.2",
+    "prettier": "^3.3.3",
+    "prisma": "^5.20.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}

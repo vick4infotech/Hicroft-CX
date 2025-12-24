@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  AGENT
+}
+
+enum TicketStatus {
+  WAITING
+  CALLED
+  SERVING
+  COMPLETED
+  NO_SHOW
+}
+
+enum TicketEventType {
+  CREATED
+  CALLED
+  RECALLED
+  TRANSFERRED
+  SERVING
+  COMPLETED
+  NO_SHOW
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users   User[]
+  queues  Queue[]
+  screens Screen[]
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  passwordHash   String
+  role           Role
+  orgId          String?
+  org            Organization? @relation(fields: [orgId], references: [id])
+
+  refreshTokenHash String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ticketsServed Ticket[] @relation("AgentTickets")
+
+  // Reverse relation for event auditing (who triggered an event)
+  ticketEvents  TicketEvent[] @relation("ActorEvents")
+}
+
+model Queue {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  name        String
+  nextNumber  Int      @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  services Service[]
+  tickets  Ticket[]
+  screens  Screen[]
+
+  // Reverse relation for queue event stream (analytics + signage)
+  ticketEvents TicketEvent[] @relation("QueueEvents")
+}
+
+model Service {
+  id        String   @id @default(cuid())
+  queueId   String
+  queue     Queue @relation(fields: [queueId], references: [id])
+  name      String
+
+  tickets Ticket[]
+}
+
+model Ticket {
+  id            String       @id @default(cuid())
+  queueId       String
+  queue         Queue        @relation(fields: [queueId], references: [id])
+  serviceId     String?
+  service       Service?     @relation(fields: [serviceId], references: [id])
+
+  number        Int
+  status        TicketStatus @default(WAITING)
+
+  counterNumber String?
+  agentId       String?
+  agent         User?        @relation("AgentTickets", fields: [agentId], references: [id])
+
+  createdAt     DateTime @default(now())
+  calledAt      DateTime?
+  servingAt     DateTime?
+  completedAt   DateTime?
+
+  events        TicketEvent[]
+}
+
+model Screen {
+  id        String @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  name      String
+  queueId   String?
+  queue     Queue? @relation(fields: [queueId], references: [id])
+
+  // For simple browser activation, we use a short code.
+  activationCode String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TicketEvent {
+  id        String @id @default(cuid())
+  ticketId  String
+  ticket    Ticket @relation(fields: [ticketId], references: [id])
+  queueId   String
+  queue     Queue @relation("QueueEvents", fields: [queueId], references: [id])
+
+  type      TicketEventType
+  actorId   String?
+  actor     User? @relation("ActorEvents", fields: [actorId], references: [id])
+
+  // Stored as JSON for flexibility (transfer target, counter, etc.)
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([queueId, createdAt])
+  @@index([actorId, createdAt])
+}
